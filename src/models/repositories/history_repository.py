@@ -24,3 +24,9 @@ class WorkoutHistoryRepository(BaseRepository):
     #         ORDER BY created_at DESC
     #     """
     #     return self.execute_select(query, (user_id, ))  
+
+    def get_data_by_workout_id(self, workout_id: int) -> Optional[dict]:
+        """Получение данных тренировки по ID"""
+        query = f"SELECT * FROM {self.table_name()} WHERE workout_id = ?"
+        results = self.execute_select(query, (workout_id, ))
+        return results

@@ -19,7 +19,7 @@ class WorkoutController:
     
     # ========== МЕТОДЫ ДЛЯ ТРЕНИРОВОК ==========
     
-    def create_workout(self, user_id: int, name: str, work_time: int = 0,
+    def create_workout(self, user_id: int, exercise_id: int, name: str, work_time: int = 0,
                       rest_time: int = 0, reps: int = 0, sets: int = 1) -> Dict[str, Any]:
         """Создание новой тренировки"""
         # # Валидация входных данных
@@ -32,6 +32,7 @@ class WorkoutController:
             # Создаем тренировку
             workout_id = self.workout_repo.create(
                 user_id=user_id,
+                exercise_id=exercise_id,
                 name=name,
                 work_time=0,
                 rest_time=rest_time,
@@ -277,6 +278,41 @@ class WorkoutController:
                 "message": f"Ошибка сохранения результата: {str(e)}"
             }
     
+    def get_last_workout_id(self, exercise_id: int) -> int:
+        """ Получение последней тренировки по ID упражнения """
+        return self.workout_repo.get_last_workout_id(exercise_id)
+        
+    
+    def get_exercise_history(self, user_id: int, exercise_id: int) -> Dict[str, Any]:
+        """ Получение данных последней тренировоки для конкретного упражнения
+        
+        Args:
+            user_id: ID пользователя
+            exercise_id: ID конкретного упражнения
+            
+        Returns:
+            Dict с историей тренировок
+        """
+        try:
+            workout_id = self.get_last_workout_id(exercise_id)
+            if workout_id is None:
+                return {
+                    "success": True,
+                    "history": None
+                }
+            history = self.history_repo.get_data_by_workout_id(workout_id)
+            return {
+                "success": True,
+                "history": history
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"Ошибка получения данных последней тренировоки для конкретного упражнения: {str(e)}"
+            }
+
+
     def get_workout_history(self, user_id: int, workout_id: int = None, 
                            limit: int = 50) -> Dict[str, Any]:
         """
@@ -292,7 +328,8 @@ class WorkoutController:
         """
         try:
             if workout_id:
-                history = self.history_repo.get_by_workout(user_id, workout_id)
+                pass
+                # history = self.workout_repo.get_by_workout(user_id, workout_id)
             else:
                 history = self.workout_repo.get_user_workouts(user_id)  #, limit)
             

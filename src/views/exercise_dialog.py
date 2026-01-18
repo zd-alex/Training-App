@@ -468,12 +468,11 @@ class exerciseDialog(QDialog):
         
         description = self.exercise_data.get('description', '')
         self.description_input.setPlainText(description)
-        
-        # self.work_time_input.setValue(self.exercise_data.get('work_time', 20))
-        self.prepare_time_input.setValue(self.exercise_data.get('prepare_time', 10))
-        self.cycles_input.setValue(self.exercise_data.get('reps', 8))
-        self.sets_input.setValue(self.exercise_data.get('sets', 1))
-        self.rest_time_input.setValue(self.exercise_data.get('rest_time', 60))
+
+        self.prepare_time_input.setValue(self.exercise_data.get('prepare_time', 0))
+        self.cycles_input.setValue(self.exercise_data.get('reps', 0))
+        self.sets_input.setValue(self.exercise_data.get('sets', 0))
+        self.rest_time_input.setValue(self.exercise_data.get('rest_time', 0))
     
     def update_exercise(self):
         """Обновление расчетов тренировки"""

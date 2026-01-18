@@ -57,12 +57,13 @@ class Database:
                 CREATE TABLE IF NOT EXISTS workouts (
                     id         INTEGER   PRIMARY KEY AUTOINCREMENT,
                     user_id    INTEGER   NOT NULL,
-                    name       TEXT     NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    exercise_id INTEGER NOT NULL,
+                    name       TEXT     NOT NULL,                    
                     work_time  INTEGER,
                     rest_time  INTEGER,
                     sets       INTEGER,
                     reps       INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY ( user_id )
                     REFERENCES users (id) ON DELETE CASCADE
                     );

@@ -43,7 +43,7 @@ class MainWindow(QMainWindow):
         self.current_workout = None
         self.beep_thread = BeepThread(frequency=1000, duration=200)
         self.last_reps = 0
-        self.workout_history = None
+        # self.workout_history = None
         
         # Настройки приложения
         self.settings = QSettings("TrainingApp", "TrainingApp")
@@ -100,6 +100,7 @@ class MainWindow(QMainWindow):
         splitter.setSizes([300, 500])
         
         main_layout.addWidget(splitter, 1)  # 1 - коэффициент растяжения
+        
         
         # === Статус бар ===
         self.setup_statusbar()
@@ -199,6 +200,9 @@ class MainWindow(QMainWindow):
         self.exercises_list.setAlternatingRowColors(True)
         self.exercises_list.itemSelectionChanged.connect(self.on_exercise_selected)
         self.exercises_list.itemDoubleClicked.connect(self.on_exercise_double_clicked)
+
+        
+
         layout.addWidget(self.exercises_list, 1)
         
         # self.exercises_list.setStyleSheet("""
@@ -361,16 +365,31 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.start_exercise_btn)
         
         # История тренировок
-        history_group = QGroupBox("Последние выполнения")
+        history_group = QGroupBox("Последние выполнения упражнения")
         history_layout = QVBoxLayout()
         
         self.history_table = QTableWidget()
-        self.history_table.setColumnCount(5)
-        self.history_table.setHorizontalHeaderLabels(["Дата/время", "Наименование", "Подходов", "Всего повторений", "Длительность"])
+        self.history_table.setColumnCount(3)
+        self.history_table.setHorizontalHeaderLabels(["Подход", "Повторений", "Длительность"])
         self.history_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         # self.history_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
 
+        # Минимальные ширины для каждой колонки (в пикселях)
+        min_widths = [80, 80, 100]  # для каждой колонки
+    
+        header = self.history_table.horizontalHeader()
+        # Установить минимальные ширины
+        for i, min_width in enumerate(min_widths):
+            header.setMinimumSectionSize(min_width)
+        
+        # Установить начальные ширины (равны минимальным или больше)
+        for i in range(self.history_table.columnCount()):
+            self.history_table.setColumnWidth(i, min_widths[i])
+        
+        # for i in range(self.history_table.columnCount()):
+        #     header.setSectionResizeMode(i, QHeaderView.ResizeMode.Interactive)
 
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.history_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         
         history_layout.addWidget(self.history_table)
@@ -619,6 +638,9 @@ class MainWindow(QMainWindow):
         self.start_timer_btn.clicked.connect(self.start_timer)
         self.execute_btn.clicked.connect(self.execute_action)
         self.stop_timer_btn.clicked.connect(self.handle_stop_workout)
+
+        # События
+        self.workout_finished.connect(self.on_workout_finished)
     
     def apply_styles(self):
         """Применение стилей из конфигурации"""
@@ -734,7 +756,7 @@ class MainWindow(QMainWindow):
         else:
             self.show_error_message("Ошибка загрузки тренировок", result["message"])
 
-        self.load_exercise_history()
+        # self.load_exercise_history()
     
     def update_exercises_list(self):
         """Обновление списка тренировок"""
@@ -786,6 +808,11 @@ class MainWindow(QMainWindow):
         exercise_id = item.data(Qt.ItemDataRole.UserRole)
         self.load_exercise_details(exercise_id)
         self.start_exercise()
+
+    def on_workout_finished(self):
+        """Обработка окончания тренировки"""
+        exercise_id = self.current_exercise['id']
+        self.load_exercise_history(exercise_id)
     
     def load_exercise_details(self, exercise_id: int):
         """Загрузка деталей выбранной тренировки"""
@@ -797,7 +824,7 @@ class MainWindow(QMainWindow):
         if result["success"]:
             self.current_exercise = result["exercise"]
             self.update_exercise_details()
-            # self.load_exercise_history(exercise_id)
+            self.load_exercise_history(exercise_id)
         else:
             self.show_error_message("Ошибка загрузки", result["message"])
     
@@ -827,64 +854,61 @@ class MainWindow(QMainWindow):
             labels[0].setText(title)
             labels[1].setText(value)
     
-    def load_exercise_history(self):
-        """Загрузка истории тренировок"""
-        result = self.workout_controller.get_workout_history(
-            self.current_user['id'], 
-            None, 
-            limit=5
-        )
-        # result = self.exercise_controller.get_exercise_history(
-        #     self.current_user['id'], 
-        #     exercise_id, 
-        #     limit=5
-        # )
+    def load_exercise_history(self, exercise_id: int = None):
+        """Загрузка данных последней тренировки для данного упражнения"""
+        if not exercise_id: return      
+
+        result = self.workout_controller.get_exercise_history(self.current_user['id'], exercise_id)
         
         if result["success"]:
-            self.workout_history = result["history"]
             self.update_history_table(result["history"])
+        else:
+            self.show_error_message("Ошибка загрузки истории тренировок", result["message"])
     
     def update_history_table(self, history):
         """Обновление таблицы истории"""
+        if not history:
+            self.history_table.setRowCount(0)
+            return
         self.history_table.setRowCount(len(history))
         
         for row, record in enumerate(history):
-            # Дата
-            utc_time_str = record.get('created_at', '')
-             # Парсим UTC время
-            utc_dt = datetime.strptime(utc_time_str, "%Y-%m-%d %H:%M:%S")
-            utc_dt = utc_dt.replace(tzinfo=timezone.utc)
+            # # Дата
+            # utc_time_str = record.get('created_at', '')
+            #  # Парсим UTC время
+            # utc_dt = datetime.strptime(utc_time_str, "%Y-%m-%d %H:%M:%S")
+            # utc_dt = utc_dt.replace(tzinfo=timezone.utc)
             
-            # Конвертируем в локальное
-            local_dt = utc_dt.astimezone()
+            # # Конвертируем в локальное
+            # local_dt = utc_dt.astimezone()
             
-            # Форматируем для отображения
-            display_time = local_dt.strftime("%d.%m.%Y %H:%M")
+            # # Форматируем для отображения
+            # display_time = local_dt.strftime("%d.%m.%Y %H:%M")
 
-            date_item = QTableWidgetItem(display_time)
-            self.history_table.setItem(row, 0, date_item)            
+            # date_item = QTableWidgetItem(display_time)
+            # self.history_table.setItem(row, 0, date_item)            
            
-            # Наименование тренировки
-            name_item = QTableWidgetItem(record.get('name', ''))
-            self.history_table.setItem(row, 1, name_item)
+            # # Наименование тренировки
+            # name_item = QTableWidgetItem(record.get('name', ''))
+            # self.history_table.setItem(row, 1, name_item)
 
-            # Число подходов
-            sets_item = QTableWidgetItem(str(record.get('sets', '')))
+            # Подход
+            sets_item = QTableWidgetItem(str(record.get('set_number', '')))
             sets_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.history_table.setItem(row, 2, sets_item)
+            self.history_table.setItem(row, 0, sets_item)
 
             # Число повторений
             reps_item = QTableWidgetItem(str(record.get('reps', '')))
             reps_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.history_table.setItem(row, 3, reps_item)
+            self.history_table.setItem(row, 1, reps_item)
 
             # Длительность
-            duration = record.get('work_time', 0)
+            duration = record.get('duration', 0)
             minutes = duration // 60
             seconds = duration % 60
             duration_item = QTableWidgetItem(f"{minutes}:{seconds:02d}")
             duration_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.history_table.setItem(row, 4, duration_item)
+            self.history_table.setItem(row, 2, duration_item)
 
     
     def load_user_stats(self):
@@ -1050,6 +1074,7 @@ class MainWindow(QMainWindow):
             if result["success"]:
                 self.load_user_data()  # Перезагружаем список
                 self.status_bar.showMessage("Упражнение удалено", 3000)
+                self.update_history_table(None)
 
             else:
                 self.show_error_message("Ошибка удаления", result["message"])
@@ -1081,6 +1106,7 @@ class MainWindow(QMainWindow):
         # self.create_workout()        
         result = self.workout_controller.create_workout(
             user_id=self.current_user['id'],
+            exercise_id=self.current_exercise['id'],
             name=self.current_exercise['name'],
             work_time=0,
             rest_time=self.current_exercise['rest_time'],
@@ -1283,7 +1309,8 @@ class MainWindow(QMainWindow):
             
             # Возврат к деталям тренировки
             QTimer.singleShot(2000, lambda: self.stacked_widget.setCurrentIndex(1))
-            
+
+            self.workout_finished.emit()            
     
     def update_timer(self):
         """Обновление таймера"""
@@ -1357,7 +1384,7 @@ class MainWindow(QMainWindow):
         self.current_workout['sets'] = self.current_set
         result = self.workout_controller.update_workout(**self.current_workout)
 
-        self.load_exercise_history()
+        # self.load_exercise_history()
     
     def on_exercise_saved(self, exercise_data):
         """Обработка сохранения тренировки"""

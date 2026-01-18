@@ -54,7 +54,7 @@ class ProfileDialog(QDialog):
     def setup_ui(self):
         """Настройка интерфейса диалога"""
         self.setWindowTitle("Профиль пользователя")
-        self.setMinimumSize(600, 500)
+        self.setMinimumSize(650, 500)
         
         main_layout = QVBoxLayout(self)
         main_layout.setSpacing(10)
@@ -249,7 +249,26 @@ class ProfileDialog(QDialog):
         table = QTableWidget()
         table.setColumnCount(5)
         table.setHorizontalHeaderLabels(["Дата/время", "Наименование", "Подходов", "Всего повторений", "Длительность"])
-        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        # table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        # table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+
+        # Минимальные ширины для каждой колонки (в пикселях)
+        min_widths = [100, 150, 50, 110, 100]  # для каждой колонки
+    
+        header = table.horizontalHeader()
+        # Установить минимальные ширины
+        for i, min_width in enumerate(min_widths):
+            header.setMinimumSectionSize(min_width)
+        
+        # Установить начальные ширины (равны минимальным или больше)
+        for i in range(table.columnCount()):
+            table.setColumnWidth(i, min_widths[i])
+        
+        for i in range(table.columnCount()):
+            header.setSectionResizeMode(i, QHeaderView.ResizeMode.Interactive)
+
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)    
         return table
     

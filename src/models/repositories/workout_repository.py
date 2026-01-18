@@ -8,13 +8,13 @@ class WorkoutRepository(BaseRepository):
     def table_name(self):
         return "workouts"
     
-    def create(self, user_id: int, name: str, work_time: int, rest_time: int, reps: int, sets: int) -> int:
+    def create(self, user_id: int, name: str, exercise_id: int, work_time: int, rest_time: int, reps: int, sets: int) -> int:
         """Создание новой тренировки для пользователя"""
         query = f"""
-            INSERT INTO {self.table_name()} (user_id, name, work_time, rest_time, reps, sets)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO {self.table_name()} (user_id, exercise_id, name, work_time, rest_time, reps, sets)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """
-        return self.execute_insert(query, (user_id, name, work_time, rest_time, reps, sets))
+        return self.execute_insert(query, (user_id, exercise_id, name, work_time, rest_time, reps, sets))
     
     def update(self, workout_id: int, user_id: int, name: str, rest_time: int, work_time: int, reps: int, sets: int) -> bool:
         """Обновление данных тренировки пользователя"""
@@ -67,3 +67,11 @@ class WorkoutRepository(BaseRepository):
             WHERE user_id = ?
         """
         return self.execute_select(query, (user_id,))
+    
+    def get_last_workout_id(self, exercise_id: int) -> int:
+        """ Получение последней тренировки по ID упражнения """
+        query = f"SELECT id FROM {self.table_name()} WHERE exercise_id = ? ORDER BY created_at DESC LIMIT 1"
+        results = self.execute_select(query, (exercise_id,))
+        return results[0]['id'] if results else None
+    
+
